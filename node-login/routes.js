@@ -9,20 +9,24 @@ const auth = require('basic-auth');
 const jwt = require('jsonwebtoken');
 const user = require('./models/user');
 const img = require('./models/user');
-const book = require('./models/user');
+const book = require('./models/book');
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
+
 
 const register = require('./functions/register');
-const add = require('./functions/addbook');
+const addbook = require('./functions/addbook');
 const login = require('./functions/login');
 const profile = require('./functions/profile');
 const password = require('./functions/password');
 const config = require('./config/config.json');
 
+
 module.exports = router => {
 
-	router.get('/', (req, res) => res.end('Welcome to Kitapp!'));
+
+	router.get('/', (req, res) => res.send('Welcome to Kitapp!'));
 
 	router.post('/authenticate', (req, res) => {
 
@@ -39,8 +43,9 @@ module.exports = router => {
 			.then(result => {
 
 				const token = jwt.sign(result, config.secret, { expiresIn: 1440 });
-
+					//status
 				res.status(result.status).json({ message: result.message, token: token });
+				res.sendStatus(status);
 
 			})
 
@@ -73,7 +78,7 @@ module.exports = router => {
 	}
 });
 
-	router.get('/users/:id', (req,res) => {
+	router.get('/users', (req,res) => {
 
 		if (checkToken(req)) {
 
@@ -162,10 +167,11 @@ module.exports = router => {
 	}
 
 
-	router.put('/users/addbook/addimg', function(req, res) {
-		img.create(req.body).then(function(img) {
-			res.send(img)
-		})
+	router.put('/users/:id/addimg', function(req, res) {
+		var bookId = req.params.id;
+		var newImg = new img(req.body);
+		newImg.save();
+		var imgId = newImg._id;
 
 		var storage = multer.diskStorage({
 		    destination: function (req, file, cb) {
@@ -176,6 +182,7 @@ module.exports = router => {
 		    }
 		});
 
+
 		var upload = multer({ storage: storage }).single('pic');
 			upload(req, res, function(err) {
 				if(err) {
@@ -184,64 +191,50 @@ module.exports = router => {
 				res.send("Image uploaded")
 			});
 
-	});
-	router.post('/users/:id/book', function(req, res) {
-		var id = new mongoose.Types.ObjectId(req.params.id); //the id of the current user
+			book.update({_id: bookId}, {$push: {imgId: imgId}});
 
-		book.create(req.body).then(function(book){
-			res.send(book)
-		});
-
-	})
-
-	router.post('/users/:id/book', function(req, res) {
-		var author = req.body.author;
-		var title = req.body.title;
-		var language = req.body.language;
-		var genre = req.body.genre;
-		var price  = req.body.price;
-
-	var newBook = new book({
-		author: author,
-		title: title,
-		language: language,
-		genre: genre,
-		price: price
 	});
 
-	newBook.save();
-	});
-	router.put('/users/:id/addbook', function(req, res) {
-				var id = new mongoose.Types.ObjectId(req.params.id); //the id of the current user
+	router.post('/users/addbook', function(req, res) {
 
-					var author = req.body.author;
-					var title = req.body.title;
-					var language = req.body.language;
-					var genre = req.body.genre;
-					var price  = req.body.price;
+		const token = req.headers['x-access-token'];
 
+		if(checkToken(token)) {
 				var newBook = new book({
-					author: author,
-					title: title,
-					language: language,
-					genre: genre,
-					price: price
-				});
-
-				newBook.save();
-
-				user.update({_id: id}, {$push:
-							{books: {author: author, title: title, language: language, genre: genre, price: price}}}).then(function(user) {
-				res.send(user)
+						author: req.body.author,
+						title: req.body.title,
+						language: req.body.language,
+						price: req.body.price
 			})
+			newBook.save();
+			res.send(token);
 
-			// 	user.update({_id: id}, {$push:
-			// 				{books: newBook._id}}).then(function(user) {
+
+		} else
+				res.send('not valid token');
+		})
+		//}
+		//checkToken(token).	function(token)
+		//res.send(user);
+		// if(checkToken(req)) {
+		// 			const token = req.headers['x-access-token'];
+		// 			var newBook = new book(req.body);
+		// 			newBook.save();
+		// 			var bookId = newBook._id;
+		//
+		// 			User.findOne({token: token}).then(function(user) {
+		// 				res.send(user);
+		// 			})
+		// }
+			// 	user.update({name: name}, {$push:
+			// 				{bookId: bookId}}).then(function(user) {
 			// 	res.send(user)
 			// })
- })
+	})
 
-	router.get('/users/:id/allbooks', function(req, res) { //OUTPUT ALL AVAILABLE BOOKS
+
+	router.get('/users/allbooks', function(req, res) { //OUTPUT ALL AVAILABLE BOOKS
+
 			 user.find({books: {$elemMatch: {'sold' : false}}}).then(function(books) {
 				 res.send(books)
 			 })
@@ -257,9 +250,11 @@ module.exports = router => {
 					res.send(result);
  			})
 	})
-"www.kitapp.com/users/:id/postabook"
+
 	router.get('/genres/:genre', function(req, res) {
 		//return books based on genre
 	})
 
+
 }
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdGF0dXMiOjIwMCwibWVzc2FnZSI6IjEyMyIsImlhdCI6MTUwMTA4NjM1NCwiZXhwIjoxNTAxMDg3Nzk0fQ.Mtq5gR7I9lmZh4vCQCsMV5nh4IjwipfZDka_UM57dTI

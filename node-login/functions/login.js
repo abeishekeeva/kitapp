@@ -24,10 +24,11 @@ exports.loginUser = (telephone, password) =>
 
 		.then(user => {
 
-			const hashed_password = user.hashed_password;
+			const userPassword = user.password;
+			//const hashed_password = user.hashed_password;
 
-			if (bcrypt.compareSync(password, hashed_password)) {
-
+			//if (bcrypt.compareSync(password, hashed_passwor)) {
+			if (password === userPassword) {
 				resolve({ status: 200, message: telephone});
 
 			} else {
